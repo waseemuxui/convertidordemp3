@@ -1,6 +1,12 @@
 const fs = require('fs');
 const path = require('path');
 
+// Ensure public directory exists
+const publicDir = path.join(__dirname, '..', 'public');
+if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+}
+
 // Create functions directory if it doesn't exist
 const functionsDir = path.join(__dirname, '..', 'netlify', 'functions');
 if (!fs.existsSync(functionsDir)) {

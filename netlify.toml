@@ -1,6 +1,6 @@
 [build]
   functions = "netlify/functions"
-  command = "npm run build"
+  publish = "public"
 
 [functions]
   external_node_modules = ["express", "multer", "ytdl-core", "fluent-ffmpeg", "@ffmpeg-installer/ffmpeg"]
@@ -16,3 +16,8 @@
   from = "/*"
   to = "/.netlify/functions/server"
   status = 200
+
+[[headers]]
+  for = "/*"
+    [headers.values]
+    Access-Control-Allow-Origin = "*"
