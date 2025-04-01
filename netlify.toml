@@ -1,9 +1,11 @@
 [build]
   functions = "netlify/functions"
+  command = "npm run build"
 
 [functions]
   external_node_modules = ["express", "multer", "ytdl-core", "fluent-ffmpeg", "@ffmpeg-installer/ffmpeg"]
   node_bundler = "esbuild"
+  included_files = ["server.js"]
 
 [build.environment]
   NODE_VERSION = "16.20.0"
