@@ -5,7 +5,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "# no build step needed"
+    "build": "mkdir -p netlify/functions && cp server.js netlify/functions/",
+    "dev": "netlify dev"
   },
   "dependencies": {
     "express": "^4.18.2",
@@ -15,5 +16,8 @@
     "cors": "^2.8.5",
     "serverless-http": "^3.1.1",
     "@ffmpeg-installer/ffmpeg": "^1.1.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^15.0.0"
   }
 }
