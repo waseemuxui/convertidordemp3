@@ -3,13 +3,22 @@ const multer = require('multer');
 const cors = require('cors');
 const ytdl = require('ytdl-core');
 const ffmpeg = require('fluent-ffmpeg');
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 const path = require('path');
 const fs = require('fs');
+
+// Set FFmpeg path for Netlify Functions
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
 const upload = multer({ dest: 'uploads/' });
 
-app.use(cors());
+// Configure CORS for Netlify domain
+app.use(cors({
+    origin: ['https://convertidordemp3.netlify.app', 'http://localhost:3000'],
+    methods: ['GET', 'POST'],
+    allowedHeaders: ['Content-Type']
+}));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
@@ -114,6 +123,44 @@ app.post('/convert-video', upload.single('file'), (req, res) => {
         })
         .save(outputPath);
 });
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({ 
+        error: 'Internal Server Error',
+        message: err.message || 'Something went wrong'
+    });
+});
+
+// Cleanup temporary files periodically
+setInterval(() => {
+    const uploadDir = path.join(__dirname, 'uploads');
+    fs.readdir(uploadDir, (err, files) => {
+        if (err) {
+            console.error('Error reading uploads directory:', err);
+            return;
+        }
+
+        const now = Date.now();
+        files.forEach(file => {
+            const filePath = path.join(uploadDir, file);
+            fs.stat(filePath, (err, stats) => {
+                if (err) {
+                    console.error('Error getting file stats:', err);
+                    return;
+                }
+
+                // Remove files older than 1 hour
+                if (now - stats.mtime.getTime() > 3600000) {
+                    fs.unlink(filePath, err => {
+                        if (err) console.error('Error deleting file:', err);
+                    });
+                }
+            });
+        });
+    });
+}, 1800000); // Run every 30 minutes
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
