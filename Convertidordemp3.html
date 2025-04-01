@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Converter Tool</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/recordrtc/5.6.2/RecordRTC.min.js"></script>
+    <style>
+        .dropzone {
+            border: 2px dashed #ccc;
+            transition: all 0.3s;
+        }
+        .dropzone.active {
+            border-color: #4f46e5;
+            background-color: #eef2ff;
+        }
+        #waveform {
+            background: linear-gradient(90deg, #4f46e5, #a855f7);
+            height: 100px;
+            border-radius: 0.5rem;
+        }
+        #progressBar {
+            transition: width 0.3s;
+        }
+        .tab {
+            transition: all 0.3s;
+        }
+        .tab.active {
+            border-bottom: 2px solid #4f46e5;
+            color: #4f46e5;
+            font-weight: 500;
+        }
+        #videoPreview {
+            max-width: 100%;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-12">
+        <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-6">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-indigo-600 mb-2">Video Converter Tool</h1>
+                <p class="text-gray-600">Convierte videos a diferentes formatos y descarga de YouTube</p>
+            </div>
+
+            <div class="flex border-b mb-6 overflow-x-auto">
+                <button id="fileTab" class="tab active py-2 px-4 mr-2 whitespace-nowrap">Archivo Local</button>
+                <button id="urlTab" class="tab py-2 px-4 whitespace-nowrap">Desde URL</button>
+                <button id="youtubeTab" class="tab py-2 px-4 whitespace-nowrap">YouTube Downloader</button>
+                <button id="converterTab" class="tab py-2 px-4 whitespace-nowrap">Video Converter</button>
+            </div>
+
+            <!-- File Upload Section -->
+            <div id="fileSection" class="mb-6">
+                <div id="dropzone" class="dropzone rounded-lg p-8 mb-6 text-center cursor-pointer">
+                    <div class="flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="text-lg font-medium text-gray-700 mb-1">Arrastra y suelta tu video aquí</p>
+                        <p class="text-sm text-gray-500">o haz clic para seleccionar un archivo</p>
+                        <input type="file" id="fileInput" class="hidden" accept="video/*,audio/*">
+                    </div>
+                </div>
+
+                <div id="fileInfo" class="hidden mb-6">
+                    <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-gray-700 truncate" id="fileName">Archivo seleccionado</span>
+                            <button id="removeFile" class="text-red-500 hover:text-red-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="progressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <span id="progressText" class="ml-2 text-sm text-gray-600">0%</span>
+                        </div>
+                    </div>
+
+                    <div id="videoPreviewContainer" class="hidden mb-4">
+                        <video id="videoPreview" controls class="w-full"></video>
+                    </div>
+
+                    <div id="waveform" class="hidden mb-6"></div>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="w-full sm:w-1/2">
+                        <label for="bitrate" class="block text-sm font-medium text-gray-700 mb-1">Calidad de audio</label>
+                        <select id="bitrate" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="128">128 kbps (Buena calidad)</option>
+                            <option value="192" selected>192 kbps (Alta calidad)</option>
+                            <option value="256">256 kbps (Excelente calidad)</option>
+                            <option value="320">320 kbps (Máxima calidad)</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="filename" class="block text-sm font-medium text-gray-700 mb-1">Nombre del archivo</label>
+                        <input type="text" id="filename" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="nombre-del-archivo">
+                    </div>
+                </div>
+
+                <button id="convertBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <span id="btnText">Convertir a MP3</span>
+                    <svg id="loadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- URL Input Section -->
+            <div id="urlSection" class="hidden mb-6">
+                <div class="mb-4">
+                    <label for="videoUrl" class="block text-sm font-medium text-gray-700 mb-1">URL del Video</label>
+                    <input type="url" id="videoUrl" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://ejemplo.com/video.mp4">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="w-full sm:w-1/2">
+                        <label for="urlBitrate" class="block text-sm font-medium text-gray-700 mb-1">Calidad de audio</label>
+                        <select id="urlBitrate" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="128">128 kbps (Buena calidad)</option>
+                            <option value="192" selected>192 kbps (Alta calidad)</option>
+                            <option value="256">256 kbps (Excelente calidad)</option>
+                            <option value="320">320 kbps (Máxima calidad)</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="urlFilename" class="block text-sm font-medium text-gray-700 mb-1">Nombre del archivo</label>
+                        <input type="text" id="urlFilename" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="nombre-del-archivo">
+                    </div>
+                </div>
+                <button id="loadUrlBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    <span id="urlBtnText">Descargar y Convertir</span>
+                    <svg id="urlLoadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- YouTube Input Section -->
+            <div id="youtubeSection" class="hidden mb-6">
+                <div class="mb-4">
+                    <label for="youtubeUrl" class="block text-sm font-medium text-gray-700 mb-1">URL de YouTube</label>
+                    <input type="url" id="youtubeUrl" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="https://youtube.com/watch?v=...">
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                    <div class="w-full sm:w-1/2">
+                        <label for="youtubeFormat" class="block text-sm font-medium text-gray-700 mb-1">Formato</label>
+                        <select id="youtubeFormat" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="mp3">MP3 (Audio solamente)</option>
+                            <option value="mp4">MP4 (Video)</option>
+                        </select>
+                    </div>
+                    <div class="w-full sm:w-1/2">
+                        <label for="youtubeQuality" class="block text-sm font-medium text-gray-700 mb-1">Calidad</label>
+                        <select id="youtubeQuality" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="high">Alta calidad</option>
+                            <option value="medium" selected>Calidad media</option>
+                            <option value="low">Baja calidad</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="loadYoutubeBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    <span id="youtubeBtnText">Descargar</span>
+                    <svg id="youtubeLoadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Video Converter Section -->
+            <div id="converterSection" class="hidden mb-6">
+                <div id="converterDropzone" class="dropzone rounded-lg p-8 mb-6 text-center cursor-pointer">
+                    <div class="flex flex-col items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                        </svg>
+                        <p class="text-lg font-medium text-gray-700 mb-1">Arrastra y suelta tu video aquí</p>
+                        <p class="text-sm text-gray-500">o haz clic para seleccionar un archivo</p>
+                        <input type="file" id="converterFileInput" class="hidden" accept="video/*">
+                    </div>
+                </div>
+
+                <div id="converterFileInfo" class="hidden mb-6">
+                    <div class="p-4 bg-gray-50 rounded-lg mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="font-medium text-gray-700 truncate" id="converterFileName">Archivo seleccionado</span>
+                            <button id="converterRemoveFile" class="text-red-500 hover:text-red-700">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="flex items-center">
+                            <div class="w-full bg-gray-200 rounded-full h-2.5">
+                                <div id="converterProgressBar" class="bg-indigo-600 h-2.5 rounded-full" style="width: 0%"></div>
+                            </div>
+                            <span id="converterProgressText" class="ml-2 text-sm text-gray-600">0%</span>
+                        </div>
+                    </div>
+
+                    <div id="converterVideoPreviewContainer" class="mb-4">
+                        <video id="converterVideoPreview" controls class="w-full rounded-lg"></video>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                        <div class="w-full sm:w-1/2">
+                            <label for="outputFormat" class="block text-sm font-medium text-gray-700 mb-1">Formato de salida</label>
+                            <select id="outputFormat" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="mp4">MP4</option>
+                                <option value="webm">WebM</option>
+                                <option value="mov">MOV</option>
+                                <option value="avi">AVI</option>
+                                <option value="mp3">MP3 (Audio solamente)</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-1/2">
+                            <label for="converterFilename" class="block text-sm font-medium text-gray-700 mb-1">Nombre del archivo</label>
+                            <input type="text" id="converterFilename" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" placeholder="nombre-del-archivo">
+                        </div>
+                    </div>
+
+                    <button id="converterConvertBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        <span id="converterBtnText">Convertir Video</span>
+                        <svg id="converterLoadingSpinner" class="hidden animate-spin ml-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div id="downloadContainer" class="hidden mt-6 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                <p class="text-green-700 mb-3">¡Conversión completada!</p>
+                <a id="downloadLink" class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition duration-200" download>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Descargar Archivo
+                </a>
+            </div>
+
+            <div id="errorContainer" class="hidden mt-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center text-red-700">
+                <p id="errorMessage"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000';
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // UI Elements
+            const dropzone = document.getElementById('dropzone');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const removeFile = document.getElementById('removeFile');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const convertBtn = document.getElementById('convertBtn');
+            const downloadContainer = document.getElementById('downloadContainer');
+            const downloadLink = document.getElementById('downloadLink');
+            const videoPreview = document.getElementById('videoPreview');
+            const videoPreviewContainer = document.getElementById('videoPreviewContainer');
+            const waveform = document.getElementById('waveform');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const btnText = document.getElementById('btnText');
+            const errorContainer = document.getElementById('errorContainer');
+            
+            let selectedFile = null;
+
+            // Tab switching
+            const tabs = ['fileTab', 'urlTab', 'youtubeTab', 'converterTab'];
+            const sections = ['fileSection', 'urlSection', 'youtubeSection', 'converterSection'];
+
+            tabs.forEach(tabId => {
+                document.getElementById(tabId).addEventListener('click', () => switchTab(tabId));
+            });
+
+            function switchTab(tabId) {
+                tabs.forEach(t => document.getElementById(t).classList.remove('active'));
+                sections.forEach(s => document.getElementById(s).classList.add('hidden'));
+                
+                document.getElementById(tabId).classList.add('active');
+                document.getElementById(tabId.replace('Tab', 'Section')).classList.remove('hidden');
+            }
+
+            // File upload handling
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropzone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropzone.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropzone.classList.add('active');
+            }
+
+            function unhighlight() {
+                dropzone.classList.remove('active');
+            }
+
+            dropzone.addEventListener('drop', handleDrop, false);
+            dropzone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles(files);
+            }
+
+            function handleFiles(files) {
+                if (files.length === 0) return;
+                
+                const file = files[0];
+                if (!file.type.startsWith('video/') && !file.type.startsWith('audio/')) {
+                    showError('Por favor selecciona un archivo de video o audio válido');
+                    return;
+                }
+
+                selectedFile = file;
+                fileName.textContent = file.name;
+                fileInfo.classList.remove('hidden');
+                convertBtn.disabled = false;
+
+                if (file.type.startsWith('video/')) {
+                    const url = URL.createObjectURL(file);
+                    videoPreview.src = url;
+                    videoPreviewContainer.classList.remove('hidden');
+                    waveform.classList.add('hidden');
+                } else {
+                    videoPreviewContainer.classList.add('hidden');
+                    waveform.classList.remove('hidden');
+                    initializeAudioVisualization(file);
+                }
+            }
+
+            function initializeAudioVisualization(file) {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const reader = new FileReader();
+
+                reader.onload = function(e) {
+                    audioContext.decodeAudioData(e.target.result, function(buffer) {
+                        visualize(buffer);
+                    });
+                };
+
+                reader.readAsArrayBuffer(file);
+            }
+
+            function visualize(buffer) {
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                const data = buffer.getChannelData(0);
+                const step = Math.ceil(data.length / canvas.width);
+                const amp = canvas.height / 2;
+
+                for (let i = 0; i < canvas.width; i++) {
+                    let min = 1.0;
+                    let max = -1.0;
+                    for (let j = 0; j < step; j++) {
+                        const datum = data[(i * step) + j];
+                        if (datum < min) min = datum;
+                        if (datum > max) max = datum;
+                    }
+                    context.fillStyle = '#4f46e5';
+                    context.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+                }
+            }
+
+            removeFile.addEventListener('click', resetFileInput);
+
+            function resetFileInput() {
+                selectedFile = null;
+                fileInput.value = '';
+                fileName.textContent = '';
+                fileInfo.classList.add('hidden');
+                convertBtn.disabled = true;
+                videoPreviewContainer.classList.add('hidden');
+                waveform.classList.add('hidden');
+                downloadContainer.classList.add('hidden');
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+            }
+
+            // URL handling
+            const videoUrl = document.getElementById('videoUrl');
+            const loadUrlBtn = document.getElementById('loadUrlBtn');
+            const urlLoadingSpinner = document.getElementById('urlLoadingSpinner');
+            const urlBtnText = document.getElementById('urlBtnText');
+
+            loadUrlBtn.addEventListener('click', async function() {
+                const url = videoUrl.value.trim();
+                if (!url) {
+                    showError('Por favor, ingresa una URL válida');
+                    return;
+                }
+
+                urlLoadingSpinner.classList.remove('hidden');
+                urlBtnText.textContent = 'Descargando...';
+                loadUrlBtn.disabled = true;
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/convert-url`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url,
+                            bitrate: document.getElementById('urlBitrate').value,
+                            filename: document.getElementById('urlFilename').value
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Error en la conversión');
+                    const data = await response.json();
+                    
+                    downloadContainer.classList.remove('hidden');
+                    downloadLink.href = data.file;
+                    downloadLink.download = `${data.title || 'converted'}.mp3`;
+                } catch (error) {
+                    showError('Error al procesar la URL');
+                } finally {
+                    urlLoadingSpinner.classList.add('hidden');
+                    urlBtnText.textContent = 'Descargar y Convertir';
+                    loadUrlBtn.disabled = false;
+                }
+            });
+
+            // YouTube handling
+            const youtubeUrl = document.getElementById('youtubeUrl');
+            const loadYoutubeBtn = document.getElementById('loadYoutubeBtn');
+
+            loadYoutubeBtn.addEventListener('click', async function() {
+                const url = youtubeUrl.value.trim();
+                if (!url) {
+                    showError('Por favor, ingresa una URL de YouTube');
+                    return;
+                }
+
+                const youtubeId = getYouTubeId(url);
+                if (!youtubeId) {
+                    showError('URL de YouTube inválida');
+                    return;
+                }
+
+                loadYoutubeBtn.disabled = true;
+                document.getElementById('youtubeBtnText').textContent = 'Descargando...';
+                document.getElementById('youtubeLoadingSpinner').classList.remove('hidden');
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/youtube`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            url: url,
+                            format: document.getElementById('youtubeFormat').value,
+                            bitrate: document.getElementById('youtubeBitrate').value
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Error en la descarga');
+                    const data = await response.json();
+                    
+                    downloadContainer.classList.remove('hidden');
+                    downloadLink.href = data.file;
+                    downloadLink.download = `${data.title}.${document.getElementById('youtubeFormat').value}`;
+                } catch (error) {
+                    showError('Error al procesar el video de YouTube');
+                } finally {
+                    loadYoutubeBtn.disabled = false;
+                    document.getElementById('youtubeBtnText').textContent = 'Descargar';
+                    document.getElementById('youtubeLoadingSpinner').classList.add('hidden');
+                }
+            });
+
+            function getYouTubeId(url) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+                const match = url.match(regExp);
+                return (match && match[2].length === 11) ? match[2] : null;
+            }
+
+            // Audio conversion
+            convertBtn.addEventListener('click', async function() {
+                if (!selectedFile) return;
+                
+                btnText.textContent = 'Convirtiendo...';
+                loadingSpinner.classList.remove('hidden');
+                convertBtn.disabled = true;
+
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                formData.append('bitrate', document.getElementById('bitrate').value + 'k');
+                
+                try {
+                    const response = await fetch(`${API_BASE_URL}/convert`, {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    if (!response.ok) throw new Error('Error en la conversión');
+                    const data = await response.json();
+                    
+                    downloadContainer.classList.remove('hidden');
+                    downloadLink.href = data.file;
+                    downloadLink.download = `${document.getElementById('filename').value || 'converted'}.mp3`;
+                } catch (error) {
+                    showError('Error al convertir el archivo');
+                } finally {
+                    btnText.textContent = 'Convertir a MP3';
+                    loadingSpinner.classList.add('hidden');
+                    convertBtn.disabled = false;
+                }
+            });
+
+            function showError(message) {
+                errorContainer.textContent = message;
+                errorContainer.classList.remove('hidden');
+                setTimeout(hideError, 5000);
+            }
+
+            function hideError() {
+                errorContainer.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
