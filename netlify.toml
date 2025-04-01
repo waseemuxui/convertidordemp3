@@ -1,6 +1,12 @@
 [build]
   publish = "public"
   functions = "netlify/functions"
+  command = "npm install --legacy-peer-deps"
+
+[build.environment]
+  NODE_VERSION = "16.20.0"
+  NPM_VERSION = "8.19.4"
+  AWS_LAMBDA_JS_RUNTIME = "nodejs16.x"
 
 [[redirects]]
   from = "/api/*"
