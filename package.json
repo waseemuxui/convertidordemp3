@@ -1,11 +1,10 @@
 {
-  "name": "video-converter-tool",
+  "name": "video-converter-api",
   "version": "1.0.0",
-  "description": "Video and audio conversion tool",
-  "main": "server.js",
+  "description": "Video conversion API",
+  "main": "netlify/functions/server.js",
   "scripts": {
-    "start": "netlify dev",
-    "dev": "netlify dev"
+    "start": "netlify dev"
   },
   "dependencies": {
     "express": "4.18.2",
@@ -16,13 +15,7 @@
     "serverless-http": "3.1.1",
     "@ffmpeg-installer/ffmpeg": "1.1.0"
   },
-  "devDependencies": {
-    "netlify-cli": "12.7.2"
-  },
   "engines": {
     "node": "16.x"
-  },
-  "resolutions": {
-    "camelcase": "6.3.0"
   }
 }

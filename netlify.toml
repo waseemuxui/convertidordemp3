@@ -1,7 +1,9 @@
 [build]
-  publish = "public"
   functions = "netlify/functions"
-  command = "npm install --legacy-peer-deps"
+
+[functions]
+  external_node_modules = ["express", "multer", "ytdl-core", "fluent-ffmpeg", "@ffmpeg-installer/ffmpeg"]
+  node_bundler = "esbuild"
 
 [build.environment]
   NODE_VERSION = "16.20.0"
@@ -9,17 +11,6 @@
   AWS_LAMBDA_JS_RUNTIME = "nodejs16.x"
 
 [[redirects]]
-  from = "/api/*"
-  to = "/.netlify/functions/api/:splat"
-  status = 200
-  force = true
-
-[[redirects]]
   from = "/*"
-  to = "/index.html"
+  to = "/.netlify/functions/server"
   status = 200
-
-[[headers]]
-  for = "/*"
-    [headers.values]
-    Access-Control-Allow-Origin = "*"
