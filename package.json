@@ -4,8 +4,7 @@
   "description": "Video and audio conversion tool",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "build": "mkdir -p netlify/functions && cp server.js netlify/functions/",
+    "start": "netlify dev",
     "dev": "netlify dev"
   },
   "dependencies": {
